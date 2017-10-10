@@ -11,3 +11,6 @@
 * bowtie2
 * samtools
 * bedtools
+* R
+  * library: preprocessCore
+  
