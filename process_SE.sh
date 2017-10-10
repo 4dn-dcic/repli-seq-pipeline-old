@@ -13,10 +13,6 @@ bamfile=${file%.fastq*}.bam
 bedfile=${file%.fastq*}.bed
 bgfile=${file%.fastq*}.bg
 sort_size=5G
-early_suffix=E_.bg
-late_suffix=L_.bg
-rt_suffix=T_.bg
-merged_rt_file=merge_RT.txt
 
 
 # Generating 50kb windows positions along the genome. You can change the -w value to change the windows size, and the -s value, to change the steps (to make overlapping windows for example)
@@ -37,13 +33,3 @@ x=`wc -l $bedfile | cut -d' ' -f 1`
 
 # generate coverage on genomic windows
 bedtools intersect -sorted -c -b $bedfile -a $genome_windows_file | awk -vx=$x '{print $1,$2,$3,$4*1e+06/x}' OFS='\t' > $bgfile)
-
-#-------
-
-# Calculating RT
-for file in *_$early_suffix; do
- paste $file ${file%$early_suffix}$late_suffix | awk '{if($8 != 0 && $4 != 0){print $1,$2,$3,log($4/$8)/log(2)}}' OFS='\t' > ${file%$early_suffix}$rt_suffix
-done
-
-# Merging RT files
-bedtools unionbedg -filler "NA" -i *$rt_suffix > $merged_rt_file
