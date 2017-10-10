@@ -1,9 +1,17 @@
-setwd("path/to/files/") 
+# assumes files with pattern "*T_.bg" in the current directory.
+# assumption of chromosome names : excluding chromosomes containing "[_YM]" in their name for loess smoothing
+
+path_to_files = "/path/to/files"
+merged_bedgraph_file = "merge_RT.txt"
+bg_file = "my_sample_T_.bg"
+bg_files = c("my_sample_1_T_.bg","my_sample_2_T_.bg")
+
+setwd(path_to_files)
 library(preprocessCore) 
 
 #  Import the merged bedgraph files: 
-merge<-read.table("merge_RT.txt", header=FALSE)
-colnames(merge)<-c(c("chr","start","end"),list.files(path=".",pattern="*T_.bg"))
+merge<-read.table(merged_bedgraph_file, header=FALSE)
+colnames(merge)<-c(c("chr","start","end"), list.files(path=".",pattern="*T_.bg"))
 merge_values<-as.matrix(merge[,4:ncol(merge)]) 
 
 # Set the datasets to use for quantile normalization (bold names have to be adapted): 
@@ -11,10 +19,10 @@ merge_values<-as.matrix(merge[,4:ncol(merge)])
 ad<-stack(merge[,4:ncol(merge)])$values 
 
 # normalisation on one datasets:
-ad<-merge[,"my_sample_T_.bg"]
+ad<-merge[, bg_file]
 
 # normalisation on multiple datasets (You can add as many datasets as you want):
-ad<-stack(merge[,c("my_sample_1_T_.bg","my_sample_2_T_.bg")])$values 
+ad<-stack(merge[, bg_files])$values 
 
 # Normalise the data: 
 norm_data<-normalize.quantiles.use.target(merge_values,ad)
