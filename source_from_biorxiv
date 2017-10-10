@@ -1,0 +1,134 @@
+Source: https://www.biorxiv.org/content/biorxiv/early/2017/03/01/104653.full.pdf
+
+
+## Single-end data
+
+# Generating 50kb windows positions along the genome. You can change the -w value to change the windows size, and the -s value, to change the steps (to make overlapping windows for example)
+sort -k1,1 -k2,2n your_genome.chrom.sizes > your_genome_sorted.chrom.sizes
+bedtools makewindows -w 50000 -s 50000 -g your_genome_sorted.chrom.sizes > your_genome_windows.bed
+
+# Mapping fastq(.gz) and making bed with values on genomic windows for file in *.fastq*; do
+# Mapping
+(bowtie2 -x /path/to/your/genome --no-mixed --no-discordant --reorder -U $file -S ${file%.fastq*}.sam 2>> mapping_log.txt
+
+# sam to bam conversion
+samtools view -bSq 10 ${file%.fastq*}.sam > ${file%.fastq*}.bam
+
+# bam to bed conversion
+bamToBed -i ${file%.fastq*}.bam | cut -f 1,2,3,4,5,6 | sort -T . -k1,1 -k2,2n -S 5G > ${file%.fastq*}.bed
+# bed line number calcul
+x=`wc -l ${file%.fastq*}.bed | cut -d' ' -f 1`
+
+# generate coverage on genomic windows
+bedtools intersect -sorted -c -b ${file%.fastq*}.bed -a your_genome_windows.bed | awk -vx=$x
+'{print $1,$2,$3,$4*1e+06/x}' OFS='\t' > ${file%.fastq*}.bg) &
+done
+wait
+
+# Calculating RT
+for file in *_E_.bg; do
+ paste $file ${file%E_.bg}L_.bg | awk '{if($8 != 0 && $4 != 0){print $1,$2,$3,log($4/$8)/log(2)}}' OFS='\t' > ${file%E_.bg}T_.bg
+done
+
+# Merging RT files
+bedtools unionbedg -filler "NA" -i *T_.bg > merge_RT.txt
+
+
+## Paired-end data
+
+# Generating the 50kb windows positions along the genome. You can change the -w value to
+change the windows size, and the -s value, to change the steps (to make overlapping windows for example)
+sort -k1,1 -k2,2n your_genome.chrom.sizes > your_genome_sorted.chrom.sizes
+bedtools makewindows -w 50000 -s 50000 -g your_genome_sorted.chrom.sizes > your_genome_windows.bed
+
+# Mapping fastq(.gz) and making bed with values on genomic windows
+for file in *R1.fastq*; do
+# Mapping
+ (bowtie2 -x /path/to/your/genome --no-mixed --no-discordant --reorder -1 $file -2 ${file%R1.fastq*}R2.fastq* -S ${file%R1.fastq*}.sam 2>> mapping_log.txt
+# sam to bam conversion
+samtools view -bSq 10 ${file%R1.fastq*}.sam > ${file%R1.fastq*}.bam
+# bam to bed conversion
+bamToBed -i ${file%R1.fastq*}.bam | cut -f 1,2,3,4,5,6 | sort -T . -k1,1 -k2,2n -S 5G > ${file%R1.fastq*}.bed
+# bed line number calcul
+x=`wc -l ${file%R1.fastq*}.bed | cut -d' ' -f 1`
+# generate coverage on genomic windows
+bedtools intersect -sorted -c -b ${file%R1.fastq*}.bed -a your_genome_windows.bed | awk -vx=$x '{print $1,$2,$3,$4*1e+06/x}' OFS='\t' > ${file%R1.fastq*}.bg) &
+done
+wait
+
+# Calculating RT
+for file in *_E_.bg; do
+paste $file ${file%E_.bg}L_.bg | awk '{if($8 != 0 && $4 != 0){print $1,$2,$3,log($4/$8)/log(2)}}' OFS='\t'> ${file%E_.bg}T_.bg
+done
+
+# Merging RT files
+bedtools unionbedg -filler "NA" -i *T_.bg > merge_RT.txt
+
+
+
+## Post-process (R)
+setwd("path/to/files/") 
+library(preprocessCore) 
+
+#  Import the merged bedgraph files: 
+merge<-read.table("merge_RT.txt", header=FALSE)
+colnames(merge)<-c(c("chr","start","end"),list.files(path=".",pattern="*T_.bg"))
+merge_values<-as.matrix(merge[,4:ncol(merge)]) 
+
+# Set the datasets to use for quantile normalization (bold names have to be adapted): 
+# normalization on all datasets: 
+ad<-stack(merge[,4:ncol(merge)])$values 
+
+# normalisation on one datasets:
+ad<-merge[,"my_sample_T_.bg"]
+
+# normalisation on multiple datasets (You can add as many datasets as you want):
+ad<-stack(merge[,c("my_sample_1_T_.bg","my_sample_2_T_.bg")])$values 
+
+# Normalise the data: 
+norm_data<-normalize.quantiles.use.target(merge_values,ad)
+merge_norm<-data.frame(merge[,1:3],norm_data)
+colnames(merge_norm)<-colnames(merge) 
+
+# Register the quantile normalized data into bedgraph files: 
+for(i in 4:ncol(merge_norm)){
+  write.table( merge_norm[complete.cases(merge_norm[,i]), c(1,2,3,i)], gsub(".bg", "qnorm.bedGraph", colnames(merge_norm)[i]), sep="\t",row.names=FALSE, quote=FALSE, col.names=FALSE)
+} 
+
+# Select the chromosome for Loess smoothing (You can modify the pattern option to select different chromosomes. Here, the pattern selects all chromosomes except chromosomes containing "_" in their name (which can be problematics for Loess smoothing), and the chromosomes Y and M (mitochondrial)):
+chrs=grep(levels(merge_norm$chr),pattern="[_YM]",invert=TRUE,value=TRUE) 
+
+# Initialise an R-list to stock your datasets: 
+AllLoess=list() 
+
+# Perform Loess smoothing (This smoothing is similar to the Loess smoothing used by Ryba et al. 18 for repli-chip analysis). The window size used for span value (in bold) can be adapted. We are using here 300kb windows but you can increase this value to increase the smoothing. 
+for(i in 1:(ncol(merge_norm)-3)){
+  AllLoess[[i]]=data.frame();
+  cat("Current dataset:", colnames(merge_norm)[i+3], "\n");
+  for(Chr in chrs){
+    RTb=subset(merge_norm, merge_norm$chr==Chr);
+    lspan=300000/(max(RTb$start)-min(RTb$start));
+    cat("Current chrom:", Chr, "\n");
+    RTla=loess(RTb[,i+3] ~ RTb$start, span=lspan);
+    RTl=data.frame(c(rep(Chr,times=RTla$n)), RTla$x, merge_norm[which(merge_norm$chr==Chr & merge_norm$start %in% RTla$x),3],RTla$fitted); colnames(RTl)=c("chr","start","end",colnames(RTb)[i+3]);
+    if(length(AllLoess[[i]])!=0){
+      AllLoess[[i]]=rbind(AllLoess[[i]],RTl)
+    };
+    if(length(AllLoess[[i]])==0){
+      AllLoess[[i]]=RTl
+    }
+  }
+} 
+
+# Register the Loess smoothed data into bedgraph files:
+for(i in 1:length(AllLoess)){
+  write.table(AllLoess[[i]][complete.cases(AllLoess[[i]]),], gsub(".bg","Loess.bedGraph", colnames(AllLoess[[i]]))[4], sep="\t", row.names=FALSE, quote=FALSE, col.names=FALSE)
+}
+
+## (Optional) Merge your bedgraph files for further analysis. 
+cd path/to/files/ 
+#  Merge the loess smoothed bedgraph files:
+bedtools unionbedg -filler "NA" -i *Loess.bedGraph > merge_Loess_norm_RT.txt 
+
+
+
