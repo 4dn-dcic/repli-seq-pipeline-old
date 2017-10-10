@@ -29,7 +29,7 @@ bedtools makewindows -w $window_size -s $window_size -g $sorted_chromsize_file >
 
 # Mapping fastq(.gz) and making bed with values on genomic windows
 # Mapping
-(bowtie2 -x $bowtie_genome --no-mixed --no-discordant --reorder -1 $file1 -2 $file2 -S $samfile 2>> $mapping_log_file
+bowtie2 -x $bowtie_genome --no-mixed --no-discordant --reorder -1 $file1 -2 $file2 -S $samfile 2>> $mapping_log_file
 # sam to bam conversion
 samtools view -bSq $mapq_cut $samfile > $bamfile
 # bam to bed conversion
