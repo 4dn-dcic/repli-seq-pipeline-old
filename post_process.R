@@ -1,10 +1,11 @@
 # assumes files with pattern "*T_.bg" in the current directory.
 # assumption of chromosome names : excluding chromosomes containing "[_YM]" in their name for loess smoothing
 
-path_to_files = "/path/to/files"
-merged_bedgraph_file = "merge_RT.txt"
-bg_file = "my_sample_T_.bg"
-bg_files = c("my_sample_1_T_.bg","my_sample_2_T_.bg")
+args = commandArgs(TRUE)
+path_to_files = args[1]
+merged_bedgraph_file = args[2] # "merge_RT.txt"
+bg_files = args[3] # c("my_sample_1_T_.bg","my_sample_2_T_.bg")
+
 
 setwd(path_to_files)
 library(preprocessCore) 
@@ -18,11 +19,13 @@ merge_values<-as.matrix(merge[,4:ncol(merge)])
 # normalization on all datasets: 
 ad<-stack(merge[,4:ncol(merge)])$values 
 
-# normalisation on one datasets:
-ad<-merge[, bg_file]
-
-# normalisation on multiple datasets (You can add as many datasets as you want):
-ad<-stack(merge[, bg_files])$values 
+if (length(bg_files)==1){
+  # normalisation on one datasets:
+  ad<-merge[, bg_files[1]]
+} else {
+  # normalisation on multiple datasets (You can add as many datasets as you want):
+  ad<-stack(merge[, bg_files])$values 
+}
 
 # Normalise the data: 
 norm_data<-normalize.quantiles.use.target(merge_values,ad)
