@@ -1,17 +1,26 @@
-file1=   # R1.fastq
-file2=   # R2.fastq
-chromsize_file=
-sorted_chromsize_file=
+file1=$1   # R1.fastq
+file2=$2   # R2.fastq
+bowtie_genome=$3    # index name for bowtie2
+chromsize_file=$4
+outprefix=$5
+
+# parameters
 window_size=50000
-genome_windows_file=your_genome_windows.bed
-bowtie_genome=/path/to/your/genome
-mapping_log_file=mapping_log.txt
 mapq_cut=10
-samfile=${file1%R1.fastq*}.sam
-bamfile=${file1%R1.fastq*}.bam
-bedfile=${file1%R1.fastq*}.bed
-bgfile=${file1%R1.fastq*}.bg
 sort_size=5G
+
+# intermediate files, data-independent
+sorted_chromsize_file=$chromsize_file.sorted
+genome_windows_file=$chromsize_file.windows.bed
+
+# log file
+mapping_log_file=mapping_log.txt
+
+# output files
+samfile=$outprefix.sam
+bamfile=$outprefix.bam
+bedfile=$outprefix.bed
+bgfile=$outprefix.bg
 
 # Generating the 50kb windows positions along the genome. You can change the -w value to change the windows size, and the -s value, to change the steps (to make overlapping windows for example)
 sort -k1,1 -k2,2n $chromsize_file > $sorted_chromsize_file
