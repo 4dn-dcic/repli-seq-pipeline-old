@@ -1,4 +1,5 @@
 #!/bin/bash
+## Usage: calculate_rt.sh input_early.bg input_late.bg output_rt.bg
 
 # input files
 early_file=$1
