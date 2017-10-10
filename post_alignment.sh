@@ -3,6 +3,7 @@ chromsize_file=$2
 outprefix=$3
 
 # parameters
+window_size=50000
 mapq_cut=10
 sort_size=5G
 
@@ -14,6 +15,10 @@ genome_windows_file=$chromsize_file.windows.bed
 bamfile=$outprefix.bam
 bedfile=$outprefix.bed
 bgfile=$outprefix.bg
+
+# Generating the 50kb windows positions along the genome. You can change the -w value to change the windows size, and the -s value, to change the steps (to make overlapping windows for example)
+sort -k1,1 -k2,2n $chromsize_file > $sorted_chromsize_file
+bedtools makewindows -w $window_size -s $window_size -g $sorted_chromsize_file > $genome_windows_file
 
 # filtering
 samtools view -bq $mapq_cut $input_bamfile > $bamfile
