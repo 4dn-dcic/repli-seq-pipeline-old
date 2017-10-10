@@ -6,3 +6,8 @@
 * 4. `merge_rt.sh`
 * 5. `post_process.R`
 * 6. (optionally) `merge_bedgraph.sh`
+
+### Requirement
+* bowtie2
+* samtools
+* bedtools
