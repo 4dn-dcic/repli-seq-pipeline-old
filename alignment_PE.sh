@@ -9,7 +9,6 @@ outprefix=$4
 mapping_log_file=mapping_log.txt
 
 # output files
-samfile=$outprefix.sam
 bamfile=$outprefix.bam
 
 # Mapping fastq(.gz) and making bed with values on genomic windows
