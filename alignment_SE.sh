@@ -10,6 +10,5 @@ mapping_log_file=mapping_log.txt
 # output files
 bamfile=$outprefix.bam
 
-# Mapping fastq(.gz) and making bed with values on genomic windows
 # Mapping
 bowtie2 -x $bowtie_genome --no-mixed --no-discordant --reorder -U $file  -S $samfile | samtools view -bS - > $bamfile 2>> $mapping_log_file
