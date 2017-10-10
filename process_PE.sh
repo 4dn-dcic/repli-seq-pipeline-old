@@ -15,13 +15,4 @@ bamToBed -i ${file%R1.fastq*}.bam | cut -f 1,2,3,4,5,6 | sort -T . -k1,1 -k2,2n 
 x=`wc -l ${file%R1.fastq*}.bed | cut -d' ' -f 1`
 # generate coverage on genomic windows
 bedtools intersect -sorted -c -b ${file%R1.fastq*}.bed -a your_genome_windows.bed | awk -vx=$x '{print $1,$2,$3,$4*1e+06/x}' OFS='\t' > ${file%R1.fastq*}.bg) &
-done
-wait
 
-# Calculating RT
-for file in *_E_.bg; do
-paste $file ${file%E_.bg}L_.bg | awk '{if($8 != 0 && $4 != 0){print $1,$2,$3,log($4/$8)/log(2)}}' OFS='\t'> ${file%E_.bg}T_.bg
-done
-
-# Merging RT files
-bedtools unionbedg -filler "NA" -i *T_.bg > merge_RT.txt
