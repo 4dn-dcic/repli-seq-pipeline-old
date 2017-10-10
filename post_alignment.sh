@@ -1,3 +1,5 @@
+#!/bin/bash
+
 input_bamfile=$1   # unfiltered bam file
 chromsize_file=$2
 outprefix=$3
@@ -12,7 +14,7 @@ sorted_chromsize_file=$chromsize_file.sorted
 genome_windows_file=$chromsize_file.windows.bed
 
 # output files
-bamfile=$outprefix.bam
+bamfile=$outprefix.bam  # filtered bam file
 bedfile=$outprefix.bed
 bgfile=$outprefix.bg
 
